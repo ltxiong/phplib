@@ -489,6 +489,265 @@ class Common
 	    }
 
 	    return $ip;
-	}
+    }
+
+
+
+    /**
+     * linux系统探测，返回操作系统中当时时刻 cpu memory load_avg 等信息
+     *
+     * @return void
+     */
+    public function sysLinuxInfo() 
+    {
+        $res = array();
+        // CPU 信息
+        $cpuinfo_str = @file("/proc/cpuinfo");
+        if($cpuinfo_str)
+        {
+            $cpuinfo_str = implode("", $cpuinfo_str);
+            @preg_match_all("/model\s+name\s{0,}\:+\s{0,}([\w\s\)\(\@.-]+)([\r\n]+)/s", $cpuinfo_str, $model);
+            @preg_match_all("/cpu\s+MHz\s{0,}\:+\s{0,}([\d\.]+)[\r\n]+/", $cpuinfo_str, $mhz);
+            @preg_match_all("/cache\s+size\s{0,}\:+\s{0,}([\d\.]+\s{0,}[A-Z]+[\r\n]+)/", $cpuinfo_str, $cache);
+            @preg_match_all("/bogomips\s{0,}\:+\s{0,}([\d\.]+)[\r\n]+/", $cpuinfo_str, $bogomips);
+            if (false !== is_array($model[1]))
+            {
+                $res['cpu']['num'] = sizeof($model[1]);
+                $res['cpu']['num_text'] = str_replace(array(1, 2, 4, 8, 16), array('单', '双', '四', '八', '十六'), $res['cpu']['num']).'核';
+                
+                for($i = 0; $i < $res['cpu']['num']; $i++) 
+                {
+                    $res['cpu']['model'][] = $model[1][$i].'&nbsp;('.$mhz[1][$i].')';
+                    $res['cpu']['mhz'][] = $mhz[1][$i];
+                    $res['cpu']['cache'][] = $cache[1][$i];
+                    $res['cpu']['bogomips'][] = $bogomips[1][$i];
+                }
+                $x1 = ($res['cpu']['num'] == 1) ? '' : ' ×'.$res['cpu']['num'];
+                $mhz[1][0] = ' | 频率:'.$mhz[1][0];
+                $cache[1][0] = ' | 二级缓存:'.$cache[1][0];
+                $bogomips[1][0] = ' | Bogomips:'.$bogomips[1][0];
+                $res['cpu']['model'][] = $model[1][0].$mhz[1][0].$cache[1][0].$bogomips[1][0].$x1;
+                if (false !== is_array($res['cpu']['model'])) $res['cpu']['model'] = implode("<br />", $res['cpu']['model']);
+                if (false !== is_array($res['cpu']['mhz'])) $res['cpu']['mhz'] = implode("<br />", $res['cpu']['mhz']);
+                if (false !== is_array($res['cpu']['cache'])) $res['cpu']['cache'] = implode("<br />", $res['cpu']['cache']);
+                if (false !== is_array($res['cpu']['bogomips'])) $res['cpu']['bogomips'] = implode("<br />", $res['cpu']['bogomips']);
+            }
+        }
+
+        // NETWORK
+        // UPTIME
+        $uptime_str = @file("/proc/uptime");
+        if($uptime_str)
+        {
+            $uptime_str = explode(' ', implode("", $uptime_str));
+            $uptime_str = trim($uptime_str[0]);
+            $min = $uptime_str / 60;
+            $hours = $min / 60;
+            $days = floor($hours / 24);
+            $hours = floor($hours - ($days * 24));
+            $min = floor($min - ($days * 60 * 24) - ($hours * 60));
+            if ($days !== 0) $res['uptime'] = $days."天";
+            if ($hours !== 0) $res['uptime'] .= $hours."小时";
+            $res['uptime'] .= $min."分钟";
+        }
+
+        // MEMORY
+        $meminfo_str = @file("/proc/meminfo");
+        if($meminfo_str)
+        {
+            $meminfo_str = implode("", $meminfo_str);
+            preg_match_all("/MemTotal\s{0,}\:+\s{0,}([\d\.]+).+?MemFree\s{0,}\:+\s{0,}([\d\.]+).+?Cached\s{0,}\:+\s{0,}([\d\.]+).+?SwapTotal\s{0,}\:+\s{0,}([\d\.]+).+?SwapFree\s{0,}\:+\s{0,}([\d\.]+)/s", $meminfo_str, $buf);
+            preg_match_all("/Buffers\s{0,}\:+\s{0,}([\d\.]+)/s", $meminfo_str, $buffers);
+            $res['mem_total'] = round($buf[1][0]/1024, 2);
+            $res['mem_free'] = round($buf[2][0]/1024, 2);
+            $res['mem_buffers'] = round($buffers[1][0]/1024, 2);
+            $res['mem_cached'] = round($buf[3][0]/1024, 2);
+            $res['mem_used'] = $res['mem_total']-$res['mem_free'];
+            $res['mem_percent'] = (floatval($res['mem_total'])!=0)?round($res['mem_used']/$res['mem_total']*100,2):0;
+            $res['mem_real_used'] = $res['mem_total'] - $res['mem_free'] - $res['mem_cached'] - $res['mem_buffers']; //真实内存使用
+            $res['mem_real_free'] = $res['mem_total'] - $res['mem_real_used']; //真实空闲
+            $res['mem_real_percent'] = (floatval($res['mem_total'])!=0)?round($res['mem_real_used']/$res['mem_total']*100,2):0; //真实内存使用率
+            $res['mem_cached_percent'] = (floatval($res['mem_cached'])!=0)?round($res['mem_cached']/$res['mem_total']*100,2):0; //Cached内存使用率
+            $res['swap_total'] = round($buf[4][0]/1024, 2);
+            $res['swap_free'] = round($buf[5][0]/1024, 2);
+            $res['swap_used'] = round($res['swap_total']-$res['swap_free'], 2);
+            $res['swap_percent'] = (floatval($res['swap_total'])!=0)?round($res['swap_used']/$res['swap_total']*100,2):0;    
+        }
+
+        // LOAD AVG
+        $loadavg_str = @file("/proc/loadavg");
+        if ($loadavg_str)
+        {
+            $loadavg_str = explode(' ', implode("", $loadavg_str));
+            $loadavg_str = array_chunk($loadavg_str, 4);
+            $res['load_avg'] = implode(' ', $loadavg_str[0]);
+        }
+        return $res;
+    }
+
+    /**
+     * 获取操作系统硬件信息
+     *
+     * @return void
+     */
+    public function getServerUsedStatus()
+    {
+        $fp = popen('top -b -n 2 | grep -E "^(Cpu|Mem|Tasks)"', "r");//获取某一时刻系统cpu和内存使用情况
+        $rs = "";
+        while(!feof($fp))
+        {
+            $rs .= fread($fp, 1024);
+        }
+        pclose($fp);
+        $sys_info = explode("\n", $rs);
+        $tast_info = explode(",", $sys_info[3]);//进程 数组
+        $cpu_info = explode(",", $sys_info[4]);  //CPU占有量  数组
+        $mem_info = explode(",", $sys_info[5]); //内存占有量 数组
+    
+        //正在运行的进程数
+        $tast_running = trim(trim($tast_info[1], 'running'));
+        //CPU占有量
+        $cpu_usage = trim(trim($cpu_info[0], 'Cpu(s): '), '%us');  //百分比
+    
+        //内存占有量
+        $mem_total = trim(trim($mem_info[0], 'Mem: '), 'k total'); 
+        $mem_used = trim($mem_info[1], 'k used');
+        $mem_usage = round(100 * intval($mem_used) / intval($mem_total), 2);  //百分比
+
+        /*硬盘使用率 begin*/
+        $fp = popen('df -lh | grep -E "^(/)"', "r");
+        $rs = fread($fp, 1024);
+        pclose($fp);
+        $rs = preg_replace("/\s{2,}/", " ", $rs);  //把多个空格换成 “_”
+        $hd = explode(" ", $rs);
+        $hd_avail = trim($hd[3], 'G'); //磁盘可用空间大小 单位G
+        $hd_usage = trim($hd[4], '%'); //挂载点 百分比
+        //print_r($hd);
+        /*硬盘使用率 end*/  
+    
+        //检测时间
+        $fp = popen("date +\"%Y-%m-%d %H:%M\"", "r");
+        $rs = fread($fp, 1024);
+        pclose($fp);
+        $detection_time = trim($rs);
+    
+        /*获取IP地址  begin*/
+        $fp = popen('ifconfig em2 | grep -e "inet addr"', 'r');
+        $rs = fread($fp, 1024);
+        pclose($fp);
+        $rs = preg_replace("/\s{2,}/", " ", trim($rs));  //把多个空格换成 “_”
+        $rs = explode(" ", $rs);
+        /*获取IP地址 end*/
+
+        return  array(
+            'cpu_usage' => $cpu_usage,
+            'mem_usage' => $mem_usage,
+            'hd_avail' => $hd_avail,
+            'hd_usage' => $hd_usage,
+            'tast_running' => $tast_running,
+            'detection_time' => $detection_time,
+            'ip_info' => $rs
+        );
+    }
+
+
+    /**
+     * 根据目标ID(int或者字符串) 进行分库分表处理 尽量通过hash打散，避免用户过于集中于某个库或某个表
+     * 需要控制转换的16进制长度，目标转换的字符串长度不超过16位
+     * @param int/string $target_columns  目标列(分表分库的业务列)
+     * @param int $target_db_num   拆分库的数量
+     * @param int $target_tab_num  拆分表的数量
+     * @return void
+     */
+    public function getDBTableSuffix($target_columns, $target_db_num, $target_tab_num)
+    {
+        $target_columns_md5 = md5($target_columns);
+        $group_db_int = intval(substr($target_columns_md5, 0, 4) . substr($target_columns_md5, -4), 16);
+        $target_db_suffix = $group_db_int % $target_db_num + 1;
+
+        $group_tab_int = intval(substr($target_columns_md5, 0, 8) . substr($target_columns_md5, -7), 16);
+        $target_tab_suffix = $group_tab_int % $target_tab_num + 1;
+        return array(
+            'db_suffix' => $target_db_suffix,
+            'tab_suffix' => $target_tab_suffix
+        );
+    }
+
+    /**
+     * @desc  im:十进制数转换成三十六机制数
+     * @param (int)$num 十进制数
+     * return 返回：三十六进制数
+    */
+    public function getChar($num) 
+    {
+        $num = intval($num);
+        if ($num <= 0) return false;
+        $charArr = array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+        $char = '';
+        do {
+            $key = ($num - 1) % 36;
+            $char = $charArr[$key] . $char;
+            $num = floor(($num - $key) / 36);
+        } while ($num > 0);
+        return $char;
+    }
+
+
+    /**
+     * @desc  im:十进制数转换成62机制数
+     * @param (int)$num 十进制数
+     * return 返回：62进制数
+    */
+    public function getChar2($num)
+    {
+        $num = intval($num);
+        if ($num <= 0) return false;
+        $charArr = array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z");
+        $char = '';
+        do {
+            $key = ($num - 1) % 62;
+            $char = $charArr[$key] . $char;
+            $num = floor(($num - $key) / 62);
+        } while ($num > 0);
+        return $char;
+    }
+
+
+    /**
+     * @desc  im:三十六进制数转换成十机制数
+     * @param (string)$char 三十六进制数
+     * return 返回：十进制数
+     */
+    public function getNum($char)
+    {
+        $array = array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D","E", "F", "G", "H", "I", "J", "K", "L","M", "N", "O","P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y","Z");
+        $len = strlen($char);
+        $sum = 0;
+        for($i = 0; $i < $len; $i++)
+        {
+            $index = array_search($char[$i], $array);
+            $sum += ($index + 1) * pow(36, $len - $i - 1);
+        }
+        return $sum;
+    }
+
+
+    /**
+     * @desc  im:62进制数转换成十机制数
+     * @param (string)$char 62进制数
+     * return 返回：十进制数
+     */
+    public function getNum2($char)
+    {
+        $array = array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D","E", "F", "G", "H", "I", "J", "K", "L","M", "N", "O","P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y","Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z");
+        $len = strlen($char);
+        $sum = 0;
+        for($i = 0; $i < $len; $i++)
+        {
+            $index = array_search($char[$i], $array);
+            $sum += ($index + 1) * pow(62, $len - $i - 1);
+        }
+        return $sum;
+    }
 
 }
