@@ -4,6 +4,8 @@
     "license": "none",
     "keywords": [
         "php",
+        "phplib",
+        "phptool"
     ],
     "authors": [
         {
