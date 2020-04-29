@@ -1,0 +1,22 @@
+{
+    "name": "ltxiong/phplib",
+    "description": "自定义能用类",
+    "license": "none",
+    "keywords": [
+        "php",
+    ],
+    "authors": [
+        {
+            "name": "ltxiong",
+            "email": "ltx851201@yeah.net"
+        }
+    ],
+    "require": {
+        "php": ">=5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ltxiong\\PhpLib\\": "./src/"
+        }
+    }
+}
