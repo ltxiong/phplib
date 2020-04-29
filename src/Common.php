@@ -407,4 +407,88 @@ class Common
         return array('module' => $module, 'controller' => $controller, 'action' => $action);
     }
 
+
+
+	/**
+	 * @desc    方法：返回时间戳毫秒
+	 * @access public
+	 * @param void
+	 * @return int
+	 */
+	public static function getMillisecond()
+	{
+		list($t1, $t2) = explode(' ', microtime());
+		return (float)sprintf('%.0f', (floatval($t1) + floatval($t2)) * 1000);
+    }
+    
+
+    /**
+	 * @desc PHP 5.5.0中自带的array_column的简单兼容，详细可查看PHP手册
+	 * @access public
+	 * @update 2016-05-19
+	 * @author 
+	 * @param array $input
+	 * @param string|int|null  $columnKey
+	 * @param string|int|null $indexKey
+	 * @return array
+	 */
+	public function arrayColumn(array $array, $column_key, $index_key=null){
+		if (version_compare(PHP_VERSION, '5.5.0', '>='))
+	    {
+	        return array_column($array, $column_key, $index_key);
+	    }
+        $result = [];
+        foreach($array as $arr) {
+            if(!is_array($arr)) continue;
+
+            if(is_null($column_key)){
+                $value = $arr;
+            }else{
+                $value = $arr[$column_key];
+            }
+
+            if(!is_null($index_key)){
+                $key = $arr[$index_key];
+                $result[$key] = $value;
+            }else{
+                $result[] = $value;
+            }
+        }
+        return $result; 
+    }
+
+
+    /**
+	 * @desc  获取用户真实ip
+	 * 根据微信获取逻辑：默认REMOTE_ADDR,当有代理时取代理真实ip
+	 * @author 
+	 * @date: 2016年7月19日
+	 * @access public
+	 * @return string
+	 */
+	public static function getRealIp()
+	{
+	    $ip = $_SERVER["REMOTE_ADDR"];//初始ip
+	    $x_forwarded_for = isset($_SERVER['HTTP_X_FORWARDED_FOR']) && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])
+	                       ? $_SERVER['HTTP_X_FORWARDED_FOR']
+	                       : '';
+	    $x_real_ip = isset($_SERVER['HTTP_X_REAL_IP']) && !empty($_SERVER['HTTP_X_REAL_IP'])
+	                       ? $_SERVER['HTTP_X_REAL_IP']
+	                       : '';
+	    //处理代理ip
+	    $tmpIp = !empty($x_forwarded_for) ? $x_forwarded_for : $x_real_ip;
+	    if (!empty($tmpIp))
+	    {
+	        $ip = $tmpIp;
+	        //如果含多级，则取第一个
+	        if (false !== strpos($tmpIp, ','))
+	        {
+	            $ipArr = explode(',', $tmpIp);
+	            $ip = trim($ipArr[0]);
+	        }
+	    }
+
+	    return $ip;
+	}
+
 }
