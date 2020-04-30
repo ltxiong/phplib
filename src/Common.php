@@ -169,30 +169,6 @@ class Common
     }
 
     /**
-     * 处理内容
-     * @access public
-     *
-     * @param string $content 帖子内容
-     * @param int $length 处理帖子内容
-     *
-     * @return void
-     */
-    public static function substringContent($content, $length = 0)
-    {
-
-        $len = mb_strlen($content);
-        $content = mb_substr($content, 0, $length, 'utf-8');
-        if ($len > $length)
-        {
-            $content .= '……';
-        }
-
-        $content = self::handleFace($content);
-
-        return $content;
-    }
-
-    /**
      * substring()  截取字符串
      * $string - 字符串
      * $length - 长度
@@ -457,7 +433,7 @@ class Common
         return $result; 
     }
 
-
+    
     /**
 	 * @desc  获取用户真实ip
 	 * 根据微信获取逻辑：默认REMOTE_ADDR,当有代理时取代理真实ip
@@ -498,7 +474,7 @@ class Common
      *
      * @return void
      */
-    public function sysLinuxInfo() 
+    public static function sysLinuxInfo() 
     {
         $res = array();
         // CPU 信息
@@ -590,7 +566,7 @@ class Common
      *
      * @return void
      */
-    public function getServerUsedStatus()
+    public static function getServerUsedStatus()
     {
         $fp = popen('top -b -n 2 | grep -E "^(Cpu|Mem|Tasks)"', "r");//获取某一时刻系统cpu和内存使用情况
         $rs = "";
@@ -659,7 +635,7 @@ class Common
      * @param int $target_tab_num  拆分表的数量
      * @return void
      */
-    public function getDBTableSuffix($target_columns, $target_db_num, $target_tab_num)
+    public static function getDBTableSuffix($target_columns, $target_db_num, $target_tab_num)
     {
         $target_columns_md5 = md5($target_columns);
         $group_db_int = intval(substr($target_columns_md5, 0, 4) . substr($target_columns_md5, -4), 16);
@@ -678,7 +654,7 @@ class Common
      * @param (int)$num 十进制数
      * return 返回：三十六进制数
     */
-    public function getChar($num) 
+    public static function getChar($num) 
     {
         $num = intval($num);
         if ($num <= 0) return false;
@@ -698,7 +674,7 @@ class Common
      * @param (int)$num 十进制数
      * return 返回：62进制数
     */
-    public function getChar2($num)
+    public static function getChar2($num)
     {
         $num = intval($num);
         if ($num <= 0) return false;
@@ -718,7 +694,7 @@ class Common
      * @param (string)$char 三十六进制数
      * return 返回：十进制数
      */
-    public function getNum($char)
+    public static function getNum($char)
     {
         $array = array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D","E", "F", "G", "H", "I", "J", "K", "L","M", "N", "O","P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y","Z");
         $len = strlen($char);
@@ -737,7 +713,7 @@ class Common
      * @param (string)$char 62进制数
      * return 返回：十进制数
      */
-    public function getNum2($char)
+    public static function getNum2($char)
     {
         $array = array("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D","E", "F", "G", "H", "I", "J", "K", "L","M", "N", "O","P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y","Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z");
         $len = strlen($char);
