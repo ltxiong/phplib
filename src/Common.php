@@ -778,5 +778,18 @@ class Common
         $short_url_data['short_url'] = $str;
         return $short_url_data;
     }
-
+    
+    /**
+     * 随机从以下特殊符号当中返回一个符号
+     * 符号列表：'∞', '卍', '卐', '￡', 'Ю', '§', '〓', '¤', '￥', '⊙', '⊕', '▓', '♥', '⊙', '◎', '☆', '★'
+     *
+     * @return string 随机返回的符号
+     */
+    public function getSpecialSymbolRand()
+    {
+        $symbol_arr = array('∞', '卍', '卐', '￡', 'Ю', '§', '〓', '¤', '￥', '⊙', '⊕', '▓', '♥', '⊙', '◎', '☆', '★');
+        $symbol_idx = array_rand($symbol_arr);
+        return $symbol_arr[$symbol_idx];
+    }
+    
 }
