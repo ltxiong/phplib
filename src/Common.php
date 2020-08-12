@@ -746,8 +746,9 @@ class Common
         );
         $x = sprintf('%u', crc32($url));
         $str = '';
-        // 按照0~1 a~z A~Z 总计 62个字符来处理，
-        while($x > 0) 
+        $len = 0;
+        // 按照0~1 a~z A~Z 总计 62个字符来处理，固定产生6位长度
+        while($x > 0 && $len < 6)
         {
             // 将unicode数据对62求余，根据余数进行接下来的处理
             $s = $x % 62;
@@ -767,7 +768,12 @@ class Common
                 $s = chr($s + 48);
             }
             $str .= $s;
+            if($x < 62)
+            {
+                $x += random_int(62, 124);
+            }
             $x = floor($x/62);
+            $len++;
         }
         $short_url_data['short_url'] = $str;
         return $short_url_data;
