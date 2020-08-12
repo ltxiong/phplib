@@ -726,4 +726,51 @@ class Common
         return $sum;
     }
 
+
+    /**
+     * 根据输入的url，采用crc32算法生成6位短码
+     * 思路：采用 0~9 a~z A~Z 总计 62个字符进行组合生成短码，对于输入的url采用crc32计算出crc32值
+     * 再将crc32值求余数，余数当成相应字符的unicode，再将相应的unicode按照一定规则转成相应的字符
+     * 每次操作都按照相应的crc32值相除再取整数，往复操作知道取整为0退出该操作，返回最终生成的字符
+     *
+     * @param string $url 需要生成短码的url
+     * @return array 加锁成功与否以及额外信息，返回的 参数列表如下所示：
+     *   $short_url_data['origin_url']  type:string 输入的原始连接
+     *   $short_url_data['short_url']  type:string 根据输入的连接生成的6位短码连接字符串
+     */
+    public function shortUrl($url)
+    {
+        $short_url_data = array(
+            'short_url' => '', 
+            'origin_url' => $url
+        );
+        $x = sprintf('%u', crc32($url));
+        $str = '';
+        // 按照0~1 a~z A~Z 总计 62个字符来处理，
+        while($x > 0) 
+        {
+            // 将unicode数据对62求余，根据余数进行接下来的处理
+            $s = $x % 62;
+            if($s > 35)
+            {
+                // a~z ASCII码 为 97～122号为26个小写英文字母
+                $s = chr($s + 61);
+            }
+            elseif($s > 9 && $s <= 35)
+            {
+                // A~Z ASCII码 为 65～90为26个大写英文字母
+                $s = chr($s + 55);
+            }
+            else
+            {
+                // 0~9 此时不做 unicode chr 转换也可以  ASCII码 为 48～57为0到9十个阿拉伯数字
+                $s = chr($s + 48);
+            }
+            $str .= $s;
+            $x = floor($x/62);
+        }
+        $short_url_data['short_url'] = $str;
+        return $short_url_data;
+    }
+
 }
